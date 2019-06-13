@@ -1,0 +1,7 @@
+apiVersion: apps/v1
+kind: ConfigMap
+metadata:
+  name: modbus-dpl-config-<edge_node_name>
+data:
+  dpl: <dpl-configuration>
+  

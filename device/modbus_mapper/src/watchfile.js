@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const chokidar = require('chokidar');
-const filename = 'dpl/dpl';
+const filename = 'dpl/deviceProfile.json';
 const util = require('util');
 
 var devIns = new Map();

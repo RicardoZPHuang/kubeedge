@@ -22,7 +22,7 @@ spec:
         - name: CONNECTOR_MQTT_IP
           value: 127.0.0.1
         - name: CONNECTOR_DPL_NAME
-          value: dpl/dpl
+          value: dpl/deviceProfile.json
         imagePullPolicy: Always
         securityContext:
           privileged: true
@@ -34,6 +34,6 @@ spec:
       volumes:
       - name: dpl-config-volume
         configMap:
-          name: modbus-dpl-config-<edge_node_name>
+          name:  device-profile-config-<edge_node_name>
       restartPolicy: Always
       

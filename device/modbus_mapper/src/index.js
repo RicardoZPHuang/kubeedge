@@ -24,7 +24,7 @@ logger = log4js.getLogger('appenders');
 let options = {
     port: 1883,
     host: '127.0.0.1',
-    dpl_name: 'dpl/dpl'
+    dpl_name: 'dpl/deviceProfile.json'
 };
 
 let mqtt_client, mqtt_client2, msg, mqtt_options, dt, devIns, devMod, devPro, modVistr;
@@ -104,12 +104,10 @@ async.series([
                 });
                 dt.setExpecteds(msgGet, (PropExpecteds)=>{
                     for (let expected of PropExpecteds) {
-                        modbusProtocolTransfer(devProtocol.protocol, (transferedProtocol)=>{
-                            if (modVistr.has(util.format('%s-%s-%s', devInstance.model, expected[0], transferedProtocol))) {
-                                let visitor = modVistr.get(util.format('%s-%s-%s', devInstance.model, expected[0], transferedProtocol));
-                                dealDeltaMsg(msgGet, expected[0], visitor, devProtocol, expected[1]);
-                            }
-                        });
+                        if (modVistr.has(util.format('%s-%s-%s', devInstance.model, expected[0], devProtocol.protocol))) {
+                            let visitor = modVistr.get(util.format('%s-%s-%s', devInstance.model, expected[0], devProtocol.protocol));
+                            dealDeltaMsg(msgGet, expected[0], visitor, devProtocol, expected[1]);
+                        }
                     }
                 });
             }
@@ -158,14 +156,12 @@ async.series([
                 if (resources.length === 7 && resources[6] === 'delta' && typeof(devProtocol) != 'undefined' && typeof(devInstance) != 'undefined') {
                     logger.info('recieved twinDelta msg');
                     Object.keys(msg.delta).forEach(function(key){
-                        modbusProtocolTransfer(devProtocol.protocol, (transferedProtocol)=>{
-                            if (modVistr.has(util.format('%s-%s-%s', devInstance.model, key, transferedProtocol))) {
-                                let visitor = modVistr.get(util.format('%s-%s-%s', devInstance.model, key, transferedProtocol));
-                                DeviceTwin.syncExpected(msg, key, (value)=>{
-                                    dealDeltaMsg(msg, key, visitor, devProtocol, value);
-                                });
-                            }
-                        });
+                        if (modVistr.has(util.format('%s-%s-%s', devInstance.model, key, devProtocol.protocol))) {
+                            let visitor = modVistr.get(util.format('%s-%s-%s', devInstance.model, key, devProtocol.protocol));
+                            DeviceTwin.syncExpected(msg, key, (value)=>{
+                                dealDeltaMsg(msg, key, visitor, devProtocol, value);
+                            });
+                        }
                     });
                 }  
             } catch (err) {
@@ -236,12 +232,10 @@ WatchFiles.watchChange(path.join(__dirname, 'dpl'), ()=>{
                     dt.setExpecteds(msgGet, (PropExpecteds)=>{
                         for (let expected of PropExpecteds) {
                             dt.compareActuals(value, ActualVal.get(util.format('%s-%s', deviceID, expected[0])),(changed)=>{
-                                modbusProtocolTransfer(devProtocol.protocol, (transferedProtocol)=>{
-                                    if (changed && modVistr.has(util.format('%s-%s-%s', devInstance.model, expected[0], transferedProtocol))) {
-                                        let visitor = modVistr.get(util.format('%s-%s-%s', devInstance.model, expected[0], transferedProtocol));
-                                        dealDeltaMsg(msgGet, expected[0], visitor, devProtocol, expected[1]);
-                                    }
-                                });
+                                if (changed && modVistr.has(util.format('%s-%s-%s', devInstance.model, expected[0], devProtocol.protocol))) {
+                                    let visitor = modVistr.get(util.format('%s-%s-%s', devInstance.model, expected[0], devProtocol.protocol));
+                                    dealDeltaMsg(msgGet, expected[0], visitor, devProtocol, expected[1]);
+                                }
                             });
                         }
                     });
@@ -276,13 +270,11 @@ function syncDeviceTwin(dt, key, protocol, actuals) {
     async.eachSeries(devMod.get(key).properties, (property, callback)=>{
         let visitor;
         if (typeof(protocol) != 'undefined') {
-            modbusProtocolTransfer(protocol.protocol, (transferedProtocol)=>{
-                if (devIns.has(key) && modVistr.has(util.format('%s-%s-%s', devIns.get(key).model, property.name, transferedProtocol))) {
-                    visitor = modVistr.get(util.format('%s-%s-%s', devIns.get(key).model, property.name, transferedProtocol));
-                } else {
-                    logger.error('failed to match visitor');
-                }
-            });
+            if (devIns.has(key) && modVistr.has(util.format('%s-%s-%s', devIns.get(key).model, property.name, protocol.protocol))) {
+                visitor = modVistr.get(util.format('%s-%s-%s', devIns.get(key).model, property.name, protocol.protocol));
+            } else {
+                logger.error('failed to match visitor');
+            }
         }
         if (typeof(protocol) != 'undefined' && typeof(visitor) != 'undefined') {
             let modbus = new Modbus(protocol, visitor);
@@ -308,7 +300,7 @@ function syncDeviceTwin(dt, key, protocol, actuals) {
 // dealDeltaMsg deal with the devicetwin delta msg
 function dealDeltaMsg(msg, key, visitor, protocol, value) {
     let modbus = new Modbus(protocol, visitor);
-    modbus.ModbusDelta(msg.twin.twin[key].metadata.type, value, (err, data)=>{
+    modbus.ModbusDelta(msg.twin[key].metadata.type, value, (err, data)=>{
         if (err) {
             logger.error('failed to modify register, err: ', err)
         } else {
@@ -317,13 +309,3 @@ function dealDeltaMsg(msg, key, visitor, protocol, value) {
     })
 }
 
-// modbusProtocolTransfer transfer ModbusTCP,RTU to Modbus
-function modbusProtocolTransfer(protocol, callback) {
-    let transferedProtocol;
-    if (protocol === 'ModbusRTU' || protocol === 'ModbusTCP') {
-        transferedProtocol = 'Modbus';
-    } else {
-        transferedProtocol = protocol;
-    }
-    callback(transferedProtocol)
-}

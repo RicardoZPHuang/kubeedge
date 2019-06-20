@@ -15,14 +15,14 @@ class Modbus {
         let protocol = this.protocol;
         let client = this.client;
         switch(protocol.protocol) {
-            case 'ModbusTCP':
+            case 'modbus-tcp':
                 client.connectTCP(protocol.protocolConfig.ip, { port: parseInt(protocol.protocolConfig.port) }, ()=>{
                     client.setTimeout(500);
-                    client.setID(protocol.protocolConfig.slaveId);
+                    client.setID(protocol.protocolConfig.slaveID);
                     callback(client);
                 });
                 break;
-            case 'ModbusRTU':
+            case 'modbus-rtu':
                 async.series([
                     function(callback) {
                         setTimeout(function () {
@@ -32,7 +32,7 @@ class Modbus {
                     function (callback) {
                         client.connectRTUBuffered(protocol.protocolConfig.serialPort, { baudRate: parseInt(protocol.protocolConfig.baudRate) }, ()=>{
                             client.setTimeout(500);
-                            client.setID(protocol.protocolConfig.slaveId);
+                            client.setID(protocol.protocolConfig.slaveID);
                             callback(null, client);
                         });
                     }], (err, res) => {callback(res[1]);
@@ -49,13 +49,13 @@ class Modbus {
         let visitor = this.visitor;
         let client = this.client;
         switch(visitor.visitorConfig.register){
-        case 'CoilsRegisters':
+        case 'CoilRegister':
             client.writeCoils(parseInt(visitor.visitorConfig.index), value, (err, data)=>{
                 client.close();
                 callback(err, data);
             });
             break;
-        case 'HoldingRegisters':
+        case 'HoldingRegister':
             client.writeRegisters(parseInt(visitor.visitorConfig.index), value, (err, data)=>{
                 client.close();
                 callback(err, data);
@@ -79,9 +79,9 @@ class Modbus {
                     case 'int':
                     case 'float':
                         value = parseInt(value);
-                        if (visitor.visitorConfig.register === 'CoilsRegisters') {
+                        if (visitor.visitorConfig.register === 'CoilRegister') {
                             transData = (value).toString(2).split('').map(function(s) { return parseInt(s); });
-                        } else if (visitor.visitorConfig.register === 'HoldingRegisters') {
+                        } else if (visitor.visitorConfig.register === 'HoldingRegister') {
                             common.IntToByteArray(value, (byteArr)=>{
                                 if (byteArr.length < visitor.visitorConfig.offset) {
                                     let zeroArr = new Array(visitor.visitorConfig.offset -byteArr.length).fill(0);
@@ -146,25 +146,25 @@ class Modbus {
         let visitor = this.visitor;
         let client = this.client;
         switch (visitor.visitorConfig.register) {
-            case 'CoilsRegisters':
+            case 'CoilRegister':
                 client.readCoils(parseInt(visitor.visitorConfig.index), parseInt(visitor.visitorConfig.offset), (err, data)=>{
                     client.close();
                     callback(err, err?data:[data.data[0]]);
                 });
                 break;
-            case 'DiscreteInputsRegisters':
+            case 'DiscreteInputRegister':
                 client.readDiscreteInputs(parseInt(visitor.visitorConfig.index), parseInt(visitor.visitorConfig.offset), (err, data)=>{
                     client.close();
                     callback(err, err?data:[data.data[0]]);
                 });
                 break;
-            case 'HoldingRegisters':
+            case 'HoldingRegister':
                 client.readHoldingRegisters(parseInt(visitor.visitorConfig.index), parseInt(visitor.visitorConfig.offset), (err, data)=>{
                     client.close();
                     callback(err, err?data:data.data);
                 });
                 break;
-            case 'InputRegisters':
+            case 'InputRegister':
                 client.readInputRegisters(parseInt(visitor.visitorConfig.index), parseInt(visitor.visitorConfig.offset), (err, data)=>{
                     client.close();
                     callback(err, err?data:data.data);
@@ -173,7 +173,7 @@ class Modbus {
             default:
                 client.close();
                 logger.info('read action is not allowed on register type ', visitor.visitorConfig.register)
-                callback('unknown Registers', null);
+                callback('unknown Registers type', null);
                 break;
         }
     }

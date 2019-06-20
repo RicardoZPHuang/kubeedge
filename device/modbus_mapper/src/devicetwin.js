@@ -24,7 +24,7 @@ class DeviceTwin {
                 }
             },
             function(internalData, callback) {
-                if (visitor.visitorConfig.isSwap && (visitor.visitorConfig.register === 'HoldingRegisters' || visitor.visitorConfig.register === 'InputRegisters')) {
+                if (visitor.visitorConfig.isSwap && (visitor.visitorConfig.register === 'HoldingRegister' || visitor.visitorConfig.register === 'InputRegister')) {
                     common.switchByte(internalData, (switchedData)=>{
                         callback(null, switchedData);
                     });
@@ -41,14 +41,14 @@ class DeviceTwin {
     // transferDataType transfer data according to the dpl configuration
     transferDataType(visitor, property, data, callback) {
         let transData;
-        switch(property.dataType) {
+        switch(property.datatype) {
             case 'int':
             case 'float':
-                if (visitor.visitorConfig.register === 'DiscreteInputsRegisters' || visitor.visitorConfig.register === 'CoilsRegisters') {
+                if (visitor.visitorConfig.register === 'DiscreteInputRegister' || visitor.visitorConfig.register === 'CoilRegister') {
                     common.bitArrayToInt(data, (num)=>{
                         transData = num;
                     });
-                } else if (visitor.visitorConfig.register === 'HoldingRegisters' || visitor.visitorConfig.register === 'InputRegisters') {
+                } else if (visitor.visitorConfig.register === 'HoldingRegister' || visitor.visitorConfig.register === 'InputRegister') {
                     common.twoByteArrayToInt(data, (num)=>{
                         transData = num;
                     })
@@ -58,16 +58,16 @@ class DeviceTwin {
                     transData = transData * visitor.visitorConfig.scale;
                 }
 
-                if (property.dataType === 'int') {
+                if (property.datatype === 'int') {
                     transData = parseInt(transData);
                 }
 
-                if (property.max !== null && transData > parseFloat(property.max)) {
+                if (property.maximum !== null && transData > parseFloat(property.maximum)) {
                     logger.info("read data is larger than max value, use max value")
-                    transData = parseInt(property.max);
-                } else if (property.min !== null && transData < parseFloat(property.min)) {
+                    transData = parseInt(property.maximum);
+                } else if (property.minimum !== null && transData < parseFloat(property.minimum)) {
                     logger.info("read data is smaller than min value, use min value")
-                    transData = parseInt(property.min);
+                    transData = parseInt(property.minimum);
                 }
 
                 callback(transData);
@@ -86,7 +86,7 @@ class DeviceTwin {
                 callback(transData);
                 break;
             default:
-                logger.error('unknown dataType: ', property.dataType);
+                logger.error('unknown dataType: ', property.datatype);
                 callback(null);
                 break;    
         }
@@ -107,7 +107,7 @@ class DeviceTwin {
                 }
             },
             metadata: {
-                tyep: property.dataType
+                tyep: property.datatype
             }
         };
         reply_msg.twin = twin;
@@ -118,13 +118,13 @@ class DeviceTwin {
     dealUpdate(transData, property, deviceID, actualVals) {
         if (!actualVals.has(util.format("%s-%s", deviceID, property.name))) {
             this.updateActual(deviceID, property, transData);
-            actualVals.set(util.format("%s-%s", deviceID, property.name), transData);
+            actualVals.set(util.format("%s-%s", deviceID, property.name), String(transData));
             logger.info("update devicetwin[%s] of device[%s] successfully", property.name, deviceID);
         } else {
             this.compareActuals(transData, actualVals.get(util.format("%s-%s", deviceID, property.name)), (changed)=>{
                 if (changed) {
                     this.updateActual(deviceID, property, transData);
-                    actualVals.set(util.format("%s-%s", deviceID, property.name), transData);
+                    actualVals.set(util.format("%s-%s", deviceID, property.name), String(transData));
                     logger.info("update devicetwin[%s] of device[%s] successfully", property.name, deviceID);
                 }
             });
